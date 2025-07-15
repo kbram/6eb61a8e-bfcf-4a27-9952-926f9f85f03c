@@ -50,7 +50,7 @@ class ReportService
         }
     }
 
-    public function generateProgressReport($studentId, $students, $assessments, $questions, $responses, $output)
+    public function generateProgressReport($studentId, $students, $assessments, $responses, $output)
     {
         $student = collect($students)->firstWhere('id', $studentId);
         if (!$student) {
@@ -92,45 +92,79 @@ class ReportService
             $output->error('Student not found.');
             return;
         }
-        $studentResponses = collect($responses)
-            ->where('student.id', $studentId)
-            ->whereNotNull('completed')
-            ->sortByDesc(function($r) {
-                return \DateTime::createFromFormat('d/m/Y H:i:s', $r['completed']);
-            });
+
+        $studentResponses = $this->getCompletedResponses($responses, $studentId);
         $latestResponse = $studentResponses->first();
         if (!$latestResponse) {
             $output->error('No completed assessments found for this student.');
             return;
         }
-        $assessment = collect($assessments)->firstWhere('id', $latestResponse['assessmentId']);
-        $assessmentName = $assessment ? $assessment['name'] : 'Assessment';
-        $completedDate = \DateTime::createFromFormat('d/m/Y H:i:s', $latestResponse['completed']);
-        $dateStr = $completedDate ? $completedDate->format('jS F Y h:i A') : $latestResponse['completed'];
+
+        $assessmentName = $this->getAssessmentName($assessments, $latestResponse['assessmentId']);
+        $dateStr = $this->getFormattedDate($latestResponse['completed']);
         $totalQuestions = count($latestResponse['responses']);
-        $correctCount = 0;
-        $wrongAnswers = [];
-        foreach ($latestResponse['responses'] as $resp) {
-            $question = collect($questions)->firstWhere('id', $resp['questionId']);
-            if (!$question) continue;
-            $isCorrect = $resp['response'] === $question['config']['key'];
-            if ($isCorrect) {
-                $correctCount++;
-            } else {
-                $option = collect($question['config']['options'])->firstWhere('id', $resp['response']);
-                $rightOption = collect($question['config']['options'])->firstWhere('id', $question['config']['key']);
-                $wrongAnswers[] = [
-                    'stem' => $question['stem'],
-                    'yourLabel' => $option ? $option['label'] : $resp['response'],
-                    'yourValue' => $option ? $option['value'] : '',
-                    'rightLabel' => $rightOption ? $rightOption['label'] : $question['config']['key'],
-                    'rightValue' => $rightOption ? $rightOption['value'] : '',
-                    'hint' => $question['config']['hint']
-                ];
-            }
-        }
+
+        [$correctCount, $wrongAnswers] = $this->processResponses($latestResponse['responses'], $questions);
+
         $output->line("{$student['firstName']} {$student['lastName']} recently completed {$assessmentName} assessment on {$dateStr}");
         $output->line("He got {$correctCount} questions right out of {$totalQuestions}. Feedback for wrong answers given below\n");
+        $this->outputWrongAnswers($wrongAnswers, $output);
+    }
+
+    private function getCompletedResponses($responses, $studentId)
+    {
+        return collect($responses)
+            ->where('student.id', $studentId)
+            ->whereNotNull('completed')
+            ->sortByDesc(function($r) {
+                return \DateTime::createFromFormat('d/m/Y H:i:s', $r['completed']);
+            });
+    }
+
+    private function getAssessmentName($assessments, $assessmentId)
+    {
+        $assessment = collect($assessments)->firstWhere('id', $assessmentId);
+        return $assessment ? $assessment['name'] : 'Assessment';
+    }
+
+    private function getFormattedDate($completed)
+    {
+        $completedDate = \DateTime::createFromFormat('d/m/Y H:i:s', $completed);
+        return $completedDate ? $completedDate->format('jS F Y h:i A') : $completed;
+    }
+
+    private function processResponses($responses, $questions)
+    {
+        $correctCount = 0;
+        $wrongAnswers = [];
+        foreach ($responses as $resp) {
+            $question = collect($questions)->firstWhere('id', $resp['questionId']);
+            if (!$question) continue;
+            if ($resp['response'] === $question['config']['key']) {
+                $correctCount++;
+            } else {
+                $wrongAnswers[] = $this->getWrongAnswerDetails($resp, $question);
+            }
+        }
+        return [$correctCount, $wrongAnswers];
+    }
+
+    private function getWrongAnswerDetails($resp, $question)
+    {
+        $option = collect($question['config']['options'])->firstWhere('id', $resp['response']);
+        $rightOption = collect($question['config']['options'])->firstWhere('id', $question['config']['key']);
+        return [
+            'stem' => $question['stem'],
+            'yourLabel' => $option ? $option['label'] : $resp['response'],
+            'yourValue' => $option ? $option['value'] : '',
+            'rightLabel' => $rightOption ? $rightOption['label'] : $question['config']['key'],
+            'rightValue' => $rightOption ? $rightOption['value'] : '',
+            'hint' => $question['config']['hint']
+        ];
+    }
+
+    private function outputWrongAnswers($wrongAnswers, $output)
+    {
         foreach ($wrongAnswers as $wrong) {
             $output->line("Question: {$wrong['stem']}");
             $output->line("Your answer: {$wrong['yourLabel']} with value {$wrong['yourValue']}");

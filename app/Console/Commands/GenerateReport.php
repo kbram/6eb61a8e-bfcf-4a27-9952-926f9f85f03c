@@ -43,7 +43,7 @@ class GenerateReport extends Command
                 $reportService->generateDiagnosticReport($studentId, $students, $assessments, $questions, $responses, $this);
                 break;
             case 'Progress':
-                $reportService->generateProgressReport($studentId, $students, $assessments, $questions, $responses, $this);
+                $reportService->generateProgressReport($studentId, $students, $assessments, $responses, $this);
                 break;
             case 'Feedback':
                 $reportService->generateFeedbackReport($studentId, $students, $assessments, $questions, $responses, $this);
