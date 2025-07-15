@@ -10,17 +10,40 @@ This application provides a command-line tool for generating student assessment 
 
 ## Usage
 
+### Without Docker
+
 Run the report generator via artisan:
 
 ```
 php artisan generate:report
 ```
 
-Follow the prompts to enter a student ID and select a report type.
+### With Docker Compose
+
+Build containers (first time or after changes):
+
+```
+docker-compose build
+```
+
+Run the Laravel application:
+
+```
+docker-compose up app
+```
+
+Run the report generator command:
+
+```
+docker-compose run app php artisan generate:report
+```
 
 ## Testing
 
 Automated tests are provided in `tests/Unit/ReportServiceTest.php`.
+
+### Without Docker
+
 Run tests with:
 
 ```
@@ -31,6 +54,14 @@ or
 
 ```
 vendor/bin/phpunit tests/Unit/ReportServiceTest.php
+```
+
+### With Docker Compose
+
+Run tests with:
+
+```
+docker-compose run test
 ```
 
 ### Sample Test Cases
@@ -45,12 +76,14 @@ vendor/bin/phpunit tests/Unit/ReportServiceTest.php
 
 -   Laravel (Console Commands, Service classes)
 -   PHPUnit (Unit testing)
+-   Docker, Docker Compose
 
 ## Project Structure
 
 -   `app/Console/Commands/GenerateReport.php`: Console command for report generation
 -   `app/Services/ReportService.php`: Service class for report logic
 -   `tests/Unit/ReportServiceTest.php`: Automated tests for report features
+-   `Dockerfile`, `docker-compose.yml`: Docker setup for app and tests
 
 ---
 
