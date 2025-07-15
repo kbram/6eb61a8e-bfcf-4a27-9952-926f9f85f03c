@@ -72,11 +72,23 @@ docker-compose run test
 -   Output summary for progress report
 -   Output feedback for wrong answers
 
+## Continuous Integration (CI)
+
+This project uses GitHub Actions for CI. On every push or pull request to `main`, tests are run automatically using the workflow defined in `.github/workflows/ci.yml`.
+
+To require tests to pass before merging:
+
+1.  Go to your repository's **Settings > Branches**.
+2.  Add a branch protection rule for `main`.
+3.  Enable **Require status checks to pass before merging** and select the `CI` workflow.
+4.  Optionally, enable **Require branches to be up to date before merging**.
+
 ## Technologies Used
 
 -   Laravel (Console Commands, Service classes)
 -   PHPUnit (Unit testing)
 -   Docker, Docker Compose
+-   GitHub Actions (Continuous Integration)
 
 ## Project Structure
 
@@ -84,6 +96,7 @@ docker-compose run test
 -   `app/Services/ReportService.php`: Service class for report logic
 -   `tests/Unit/ReportServiceTest.php`: Automated tests for report features
 -   `Dockerfile`, `docker-compose.yml`: Docker setup for app and tests
+-   `.github/workflows/ci.yml`: GitHub Actions workflow for CI
 
 ---
 
